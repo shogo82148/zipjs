@@ -41,28 +41,28 @@
 
 
     /* constant tables (inflate) */
-    var zip_MASK_BITS = new Array(
+    var zip_MASK_BITS = new Uint16Array([
         0x0000,
         0x0001, 0x0003, 0x0007, 0x000f, 0x001f, 0x003f, 0x007f, 0x00ff,
-        0x01ff, 0x03ff, 0x07ff, 0x0fff, 0x1fff, 0x3fff, 0x7fff, 0xffff);
+        0x01ff, 0x03ff, 0x07ff, 0x0fff, 0x1fff, 0x3fff, 0x7fff, 0xffff]);
     // Tables for deflate from PKZIP's appnote.txt.
-    var zip_cplens = new Array( // Copy lengths for literal codes 257..285
+    var zip_cplens = new Uint16Array([ // Copy lengths for literal codes 257..285
         3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31,
-        35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0);
+        35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0]);
     /* note: see note #13 above about the 258 in this list. */
-    var zip_cplext = new Array( // Extra bits for literal codes 257..285
+    var zip_cplext = new Uint8Array([ // Extra bits for literal codes 257..285
         0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2,
-        3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0, 99, 99); // 99==invalid
-    var zip_cpdist = new Array( // Copy offsets for distance codes 0..29
+        3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0, 99, 99]); // 99==invalid
+    var zip_cpdist = new Uint16Array([ // Copy offsets for distance codes 0..29
         1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
         257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145,
-        8193, 12289, 16385, 24577);
-    var zip_cpdext = new Array( // Extra bits for distance codes
+        8193, 12289, 16385, 24577]);
+    var zip_cpdext = new Uint8Array([ // Extra bits for distance codes
         0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
         7, 7, 8, 8, 9, 9, 10, 10, 11, 11,
-        12, 12, 13, 13);
-    var zip_border = new Array(  // Order of the bit length code lengths
-        16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15);
+        12, 12, 13, 13]);
+    var zip_border = new Uint8Array([  // Order of the bit length code lengths
+        16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
     /* objects (inflate) */
 
     function zip_HuftList() {
@@ -102,7 +102,7 @@
            decoded. */
         {
             var a;			// counter for codes of length k
-            var c = new Array(this.BMAX+1);	// bit length count table
+            var c = new Uint32Array(this.BMAX+1);	// bit length count table
             var el;			// length of EOB code (value 256)
             var f;			// i repeats in table every f entries
             var g;			// maximum code length
@@ -110,15 +110,15 @@
             var i;			// counter, current code
             var j;			// counter
             var k;			// number of bits in current code
-            var lx = new Array(this.BMAX+1);	// stack of bits per table
+            var lx = new Uint32Array(this.BMAX+1);	// stack of bits per table
             var p;			// pointer into c[], b[], or v[]
             var pidx;		// index of p
             var q;			// (zip_HuftNode) points to current table
             var r = new zip_HuftNode(); // table entry for structure assignment
             var u = new Array(this.BMAX); // zip_HuftNode[BMAX][]  table stack
-            var v = new Array(this.N_MAX); // values in order of bit length
+            var v = new Uint32Array(this.N_MAX); // values in order of bit length
             var w;
-            var x = new Array(this.BMAX+1);// bit offsets, then code stack
+            var x = new Uint32Array(this.BMAX+1);// bit offsets, then code stack
             var xp;			// pointer into x or c
             var y;			// number of dummy codes added
             var z;			// number of entries in current table
@@ -308,7 +308,7 @@
     function zip_GET_BYTE() {
         if(zip_inflate_data.length == zip_inflate_pos)
             return -1;
-        return zip_inflate_data.charCodeAt(zip_inflate_pos++) & 0xff;
+        return zip_inflate_data[zip_inflate_pos++];
     }
 
     function zip_NEEDBITS(n) {
@@ -392,15 +392,25 @@
             zip_copy_dist = zip_wp - t.n - zip_GETBITS(e);
             zip_DUMPBITS(e);
 
+            var zip_copy_leng_local = zip_copy_leng;
+            var zip_copy_dist_local = zip_copy_dist;
+            var zip_WSIZE_local = zip_WSIZE - 1;
+            var zip_wp_local = zip_wp;
+            var buff_local = buff;
+            var zip_slide_local = zip_slide;
             // do the copy
-            while(zip_copy_leng > 0 && n < size) {
-                zip_copy_leng--;
-                zip_copy_dist &= zip_WSIZE - 1;
-                zip_wp &= zip_WSIZE - 1;
-                buff[off + n++] = zip_slide[zip_wp++]
-                    = zip_slide[zip_copy_dist++];
+            while(zip_copy_leng_local > 0 && n < size) {
+                --zip_copy_leng_local;
+                zip_copy_dist_local &= zip_WSIZE_local;
+                zip_wp_local &= zip_WSIZE_local;
+                buff_local[off + n] = zip_slide_local[zip_wp_local]
+                    = zip_slide_local[zip_copy_dist_local];
+                ++n; ++zip_wp_local; ++zip_copy_dist_local;
             }
 
+            zip_copy_leng = zip_copy_leng_local;
+            zip_copy_dist = zip_copy_dist_local;
+            zip_wp = zip_wp_local;
             if(n == size)
                 return size;
         }
@@ -452,7 +462,7 @@
         // if first time, set up tables for fixed blocks
         if(zip_fixed_tl == null) {
             var i;			// temporary variable
-            var l = new Array(288);	// length list for huft_build
+            var l = new Uin32Array(288);	// length list for huft_build
             var h;	// zip_HuftBuild
 
             // literal table
@@ -507,7 +517,7 @@
         var nb;		// number of bit length codes
         var nl;		// number of literal/length codes
         var nd;		// number of distance codes
-        var ll = new Array(286+30); // literal/length and distance code lengths
+        var ll = new Uint32Array(286+30); // literal/length and distance code lengths
         var h;		// (zip_HuftBuild)
 
         for(i = 0; i < ll.length; i++)
@@ -624,7 +634,7 @@
         var i;
 
         if(zip_slide == null)
-            zip_slide = new Array(2 * zip_WSIZE);
+            zip_slide = new Uint8Array(2 * zip_WSIZE);
         zip_wp = 0;
         zip_bit_buf = 0;
         zip_bit_len = 0;
@@ -729,23 +739,31 @@
         GLOBAL.JSInflate = JSInflate;
     }
 
-    JSInflate.inflate = function (data) {
+    JSInflate.inflate = function (data, size) {
+        sumTime = 0;
         var out, buff;
         var i, j;
+        var offset = 0;
 
         zip_inflate_start();
         zip_inflate_data = data;
         zip_inflate_pos = 0;
 
-        buff = new Array(1024);
-        out = "";
+        buff = new Uint8Array(1024);
+        out = new Uint8Array(size || 1024);
         while((i = zip_inflate_internal(buff, 0, buff.length)) > 0) {
-            for(j = 0; j < i; j++)
-                out += String.fromCharCode(buff[j]);
+            if(offset+i>out.length) {
+                var tmp = new Uint8Array(out.length*2);
+                tmp.set(out, 0);
+                out = tmp;
+            }
+            out.set(buff.subarray(0,i), offset);
+            offset += i;
         }
         zip_inflate_data = null; // G.C.
 
-        return out;
+        console.log(sumTime);
+        return out.subarray(0,offset);
     };
 
     function write_inflated_internal(ws, buff) {
@@ -769,7 +787,7 @@
         bytesWritten = 0;
 
         var ws = fs.createWriteStream(unzipFile);
-        buff = new Array(1024);
+        buff = new Uint8Array(1024);
         var bytesInflated = 0;
 
         ws.on('drain', function() {

@@ -56,12 +56,11 @@
   File.prototype.data = null;
   File.prototype.header = null;
   File.prototype.inflate = function () {
-    var blob = String.fromCharCode.apply(null, this.data);
-
+    var blob = this.data;
     if ( this.method == 0 ) {
       return blob;
     } else {
-      return JSInflate.inflate(blob);
+      return JSInflate.inflate(blob, this.fileSize);
     }
   };
 
@@ -142,7 +141,7 @@
       return this.position >= this.length;
     },
     read : function (len) {
-      var b = this.bytes.slice(this.position, this.position + len);
+      var b = this.bytes.subarray(this.position, this.position + len);
       this.position += len;
       return b;
     },
@@ -205,16 +204,12 @@
     var xhr = new XMLHttpRequest();
     xhr.open("GET", url)
     xhr.onload = function () {
-      var blob = xhr.responseText;
-      var bytes = [];
-
-      for ( var i = 0; i < blob.length; i++ ) {
-        bytes.push(blob.charCodeAt(i) & 0xff);
-      }
+      var blob = xhr.response;
+      var bytes = new Uint8Array(blob);
 
       callback(Zip_inflate(bytes));
     };
-    xhr.overrideMimeType("text/plain;charset=x-user-defined");
+    xhr.responseType = "arraybuffer";
     xhr.send(null);
   }
 })(this);
