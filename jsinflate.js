@@ -762,7 +762,6 @@
         }
         zip_inflate_data = null; // G.C.
 
-        console.log(sumTime);
         return out.subarray(0,offset);
     };
 
